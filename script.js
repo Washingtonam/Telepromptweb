@@ -34,6 +34,8 @@ const elements = {
   recordingCount: document.getElementById("recordingCount")
 };
 
+const CAMERA_POSITION_KEY = "teleprompter-camera-position-v1";
+
 const defaultSettings = {
   script: elements.editor.value,
   speed: 1,
@@ -204,12 +206,15 @@ elements.mirrorHBtn.addEventListener("click", () => toggleMirror(elements.mirror
 elements.mirrorVBtn.addEventListener("click", () => toggleMirror(elements.mirrorVBtn));
 elements.cameraBtn.addEventListener("click", () => {
   elements.cameraPanel.hidden = false;
+  elements.app.classList.add("camera-open");
+  window.requestAnimationFrame(restoreCameraPosition);
   startCamera();
   renderRecordings();
 });
 elements.cameraCloseBtn.addEventListener("click", () => {
   stopCamera();
   elements.cameraPanel.hidden = true;
+  elements.app.classList.remove("camera-open");
 });
 elements.cameraSelect.addEventListener("change", startCamera);
 elements.switchCameraBtn.addEventListener("click", () => {
@@ -218,6 +223,59 @@ elements.switchCameraBtn.addEventListener("click", () => {
   startCamera();
 });
 elements.recordBtn.addEventListener("click", toggleRecording);
+const cameraHeading = elements.cameraPanel.querySelector(".camera-heading");
+let cameraDrag = null;
+
+function applyCameraPosition(position) {
+  if (!position) return;
+  const x = Math.max(8, Math.min(window.innerWidth - elements.cameraPanel.offsetWidth - 8, position.x));
+  const y = Math.max(52, Math.min(window.innerHeight - elements.cameraPanel.offsetHeight - 8, position.y));
+  elements.cameraPanel.style.left = `${x}px`;
+  elements.cameraPanel.style.top = `${y}px`;
+  elements.cameraPanel.style.right = "auto";
+  elements.cameraPanel.style.bottom = "auto";
+}
+
+function restoreCameraPosition() {
+  try {
+    const position = JSON.parse(localStorage.getItem(CAMERA_POSITION_KEY));
+    if (position && Number.isFinite(position.x) && Number.isFinite(position.y)) {
+      applyCameraPosition(position);
+    }
+  } catch (_) {}
+}
+
+cameraHeading.addEventListener("pointerdown", (event) => {
+  if (event.target.closest("button")) return;
+  const rect = elements.cameraPanel.getBoundingRect?.() || elements.cameraPanel.getBoundingClientRect();
+  cameraDrag = {
+    pointerId: event.pointerId,
+    offsetX: event.clientX - rect.left,
+    offsetY: event.clientY - rect.top
+  };
+  elements.cameraPanel.setPointerCapture(event.pointerId);
+});
+
+elements.cameraPanel.addEventListener("pointermove", (event) => {
+  if (!cameraDrag || event.pointerId !== cameraDrag.pointerId) return;
+  const x = event.clientX - cameraDrag.offsetX;
+  const y = event.clientY - cameraDrag.offsetY;
+  applyCameraPosition({ x, y });
+});
+
+function finishCameraDrag(event) {
+  if (!cameraDrag || event.pointerId !== cameraDrag.pointerId) return;
+  cameraDrag = null;
+  const rect = elements.cameraPanel.getBoundingClientRect();
+  try {
+    localStorage.setItem(CAMERA_POSITION_KEY, JSON.stringify({ x: rect.left, y: rect.top }));
+  } catch (_) {}
+}
+elements.cameraPanel.addEventListener("pointerup", finishCameraDrag);
+elements.cameraPanel.addEventListener("pointercancel", finishCameraDrag);
+window.addEventListener("resize", () => {
+  if (!elements.cameraPanel.hidden) restoreCameraPosition();
+});
 
 document.addEventListener("keydown", (event) => {
   if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {

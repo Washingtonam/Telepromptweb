@@ -364,6 +364,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
 }
+.camera-heading {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
 .camera-heading > div { display: grid; gap: 2px; }
 .camera-heading strong, .recordings-heading strong { font-size: 13px; }
 .camera-heading span, .recordings-heading span, #recordingCount { color: var(--muted); font-size: 11px; }
@@ -435,8 +440,67 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   }
   .camera-panel {
     right: 8px;
-    bottom: 188px;
-    width: calc(100vw - 16px);
-    max-height: calc(100dvh - 200px);
+    top: 60px;
+    bottom: auto;
+    width: min(180px, 42vw);
+    height: 132px;
+    max-height: none;
+    grid-template-rows: 22px minmax(0, 1fr) 40px;
+    gap: 5px;
+    padding: 8px;
+    border-radius: 10px;
+  }
+  .camera-panel .camera-heading {
+    align-items: center;
+  }
+  .camera-panel .camera-heading strong {
+    font-size: 11px;
+  }
+  .camera-panel .camera-heading span,
+  .camera-panel .recordings-heading,
+  .camera-panel .recordings-list {
+    display: none;
+  }
+  .camera-close {
+    width: 22px;
+    height: 22px;
+    line-height: 20px;
+    font-size: 18px;
+  }
+  #cameraPreview {
+    min-height: 0;
+    border-radius: 7px;
+  }
+  .camera-toolbar {
+    gap: 4px;
+  }
+  .camera-toolbar select,
+  .camera-toolbar .camera-secondary {
+    display: none;
+  }
+  .camera-toolbar .record-button {
+    width: 100%;
+    height: 34px;
+    min-width: 0;
+    background: rgba(9, 11, 15, 0.78);
+    color: var(--text);
+  }
+  .camera-toolbar .record-button.recording {
+    background: white;
+    color: #090b0f;
+  }
+  .app.camera-open .workspace {
+    grid-template-columns: 1fr;
+  }
+  .app.camera-open .editor-panel {
+    display: none;
+  }
+  .app.camera-open .prompter-shell {
+    padding: 8px;
+    grid-column: 1;
+  }
+  .app.camera-open .reading-text {
+    padding-left: 8%;
+    padding-right: 8%;
   }
 }
