@@ -475,15 +475,33 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
     gap: 4px;
   }
   .camera-toolbar select,
-  .camera-toolbar .camera-secondary {
+  #switchCameraBtn {
     display: none;
   }
+  #libraryBtn {
+    height: 34px;
+    width: 64px;
+    padding: 0;
+    background: rgba(9, 11, 15, 0.78);
+    color: var(--text);
+  }
   .camera-toolbar .record-button {
-    width: 100%;
+    flex: 1;
     height: 34px;
     min-width: 0;
     background: rgba(9, 11, 15, 0.78);
     color: var(--text);
+  }
+  .camera-panel.library-open {
+    width: min(390px, calc(100vw - 16px));
+    height: min(520px, calc(100dvh - 72px));
+    grid-template-rows: 22px 180px 40px auto minmax(80px, 1fr);
+  }
+  .camera-panel.library-open .recordings-heading {
+    display: flex;
+  }
+  .camera-panel.library-open .recordings-list {
+    display: block;
   }
   .camera-toolbar .record-button.recording {
     background: white;

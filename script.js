@@ -27,6 +27,7 @@ const elements = {
   cameraPreview: document.getElementById("cameraPreview"),
   cameraSelect: document.getElementById("cameraSelect"),
   switchCameraBtn: document.getElementById("switchCameraBtn"),
+  libraryBtn: document.getElementById("libraryBtn"),
   recordBtn: document.getElementById("recordBtn"),
   recordButtonText: document.getElementById("recordButtonText"),
   cameraStatus: document.getElementById("cameraStatus"),
@@ -214,6 +215,7 @@ elements.cameraBtn.addEventListener("click", () => {
 elements.cameraCloseBtn.addEventListener("click", () => {
   stopCamera();
   elements.cameraPanel.hidden = true;
+  elements.cameraPanel.classList.remove("library-open");
   elements.app.classList.remove("camera-open");
 });
 elements.cameraSelect.addEventListener("change", startCamera);
@@ -221,6 +223,11 @@ elements.switchCameraBtn.addEventListener("click", () => {
   useEnvironmentCamera = !useEnvironmentCamera;
   elements.cameraSelect.value = "";
   startCamera();
+});
+elements.libraryBtn.addEventListener("click", () => {
+  elements.cameraPanel.classList.toggle("library-open");
+  renderRecordings();
+  window.requestAnimationFrame(restoreCameraPosition);
 });
 elements.recordBtn.addEventListener("click", toggleRecording);
 const cameraHeading = elements.cameraPanel.querySelector(".camera-heading");
@@ -385,9 +392,9 @@ async function renderRecordings() {
       name.textContent = `${date.toLocaleString()} - ${formatTime(Math.round(recording.duration || 0))}`;
       const download = document.createElement("button");
       download.type = "button";
-      download.textContent = "Save";
-      download.title = "Download recording";
-      download.addEventListener("click", () => downloadRecording(recording));
+      download.textContent = isMobileShareSupported() ? "Save" : "Download";
+      download.title = isMobileShareSupported() ? "Save to gallery or another app" : "Download recording";
+      download.addEventListener("click", () => saveOrShareRecording(recording));
       const remove = document.createElement("button");
       remove.type = "button";
       remove.textContent = "Delete";
@@ -411,6 +418,28 @@ function downloadRecording(recording) {
   link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function isMobileShareSupported() {
+  return Boolean(navigator.share && navigator.canShare && window.matchMedia("(max-width: 620px)").matches);
+}
+
+async function saveOrShareRecording(recording) {
+  const extension = recording.blob.type.includes("webm") ? "webm" : "mp4";
+  const file = new File([recording.blob], `teleprompter-${Date.now()}.${extension}`, { type: recording.blob.type });
+  if (navigator.share && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: "Teleprompter recording",
+        text: "Save this recording to Photos or Gallery"
+      });
+      return;
+    } catch (error) {
+      if (error.name === "AbortError") return;
+    }
+  }
+  downloadRecording(recording);
 }
 
 async function loadCameraDevices() {
