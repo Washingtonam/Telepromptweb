@@ -474,7 +474,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   .camera-toolbar {
     gap: 4px;
   }
-  .camera-toolbar select,
+  #formatSelect {
+    flex: 0 0 58px;
+    font-size: 11px;
+    padding: 0 4px;
+  }
+  #cameraSelect,
   #switchCameraBtn {
     display: none;
   }

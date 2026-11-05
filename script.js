@@ -26,6 +26,7 @@ const elements = {
   cameraCloseBtn: document.getElementById("cameraCloseBtn"),
   cameraPreview: document.getElementById("cameraPreview"),
   cameraSelect: document.getElementById("cameraSelect"),
+  formatSelect: document.getElementById("formatSelect"),
   switchCameraBtn: document.getElementById("switchCameraBtn"),
   libraryBtn: document.getElementById("libraryBtn"),
   recordBtn: document.getElementById("recordBtn"),
@@ -36,6 +37,7 @@ const elements = {
 };
 
 const CAMERA_POSITION_KEY = "teleprompter-camera-position-v1";
+const CAMERA_FORMAT_KEY = "teleprompter-camera-format-v1";
 
 const defaultSettings = {
   script: elements.editor.value,
@@ -219,6 +221,11 @@ elements.cameraCloseBtn.addEventListener("click", () => {
   elements.app.classList.remove("camera-open");
 });
 elements.cameraSelect.addEventListener("change", startCamera);
+elements.formatSelect.addEventListener("change", () => {
+  try {
+    localStorage.setItem(CAMERA_FORMAT_KEY, elements.formatSelect.value);
+  } catch (_) {}
+});
 elements.switchCameraBtn.addEventListener("click", () => {
   useEnvironmentCamera = !useEnvironmentCamera;
   elements.cameraSelect.value = "";
@@ -327,6 +334,14 @@ let mediaRecorder = null;
 let recordedChunks = [];
 let useEnvironmentCamera = false;
 
+const savedFormat = localStorage.getItem(CAMERA_FORMAT_KEY);
+if (savedFormat && ["mp4", "webm", "mov"].includes(savedFormat)) {
+  elements.formatSelect.value = savedFormat;
+} else {
+  elements.formatSelect.value = "mp4";
+  try { localStorage.setItem(CAMERA_FORMAT_KEY, "mp4"); } catch (_) {}
+}
+
 function openIndexedDb() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("teleprompter-recordings", 1);
@@ -341,14 +356,15 @@ function openIndexedDb() {
   });
 }
 
-async function saveRecording(blob, duration) {
+async function saveRecording(blob, duration, format = blob.type.includes("webm") ? "webm" : "mp4") {
   const database = await openIndexedDb();
   const transaction = database.transaction("videos", "readwrite");
   transaction.objectStore("videos").add({
     blob,
     duration,
     createdAt: new Date().toISOString(),
-    type: blob.type
+    type: blob.type,
+    format
   });
   transaction.oncomplete = () => {
     database.close();
@@ -409,7 +425,10 @@ async function renderRecordings() {
 }
 
 function downloadRecording(recording) {
-  const extension = recording.blob.type.includes("webm") ? "webm" : "mp4";
+  const extension = recording.format === "mov"
+    ? "mov"
+    : recording.format || (recording.blob.type.includes("webm") ? "webm" : "mp4");
+  const mimeType = extension === "mov" ? "video/quicktime" : recording.blob.type;
   const url = URL.createObjectURL(recording.blob);
   const link = document.createElement("a");
   link.href = url;
@@ -425,8 +444,11 @@ function isMobileShareSupported() {
 }
 
 async function saveOrShareRecording(recording) {
-  const extension = recording.blob.type.includes("webm") ? "webm" : "mp4";
-  const file = new File([recording.blob], `teleprompter-${Date.now()}.${extension}`, { type: recording.blob.type });
+  const extension = recording.format === "mov"
+    ? "mov"
+    : recording.format || (recording.blob.type.includes("webm") ? "webm" : "mp4");
+  const fileType = extension === "mov" ? "video/quicktime" : recording.blob.type;
+  const file = new File([recording.blob], `teleprompter-${Date.now()}.${extension}`, { type: fileType });
   if (navigator.share && navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({
@@ -502,8 +524,13 @@ async function toggleRecording() {
     return;
   }
   recordedChunks = [];
-  const supportedType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"]
-    .find((type) => MediaRecorder.isTypeSupported(type));
+  const preferredFormat = elements.formatSelect.value;
+  const typeCandidates = preferredFormat === "mp4"
+    ? ["video/mp4;codecs=avc1,opus", "video/mp4;codecs=avc1,mp4a.40.2", "video/mp4"]
+    : preferredFormat === "mov"
+      ? ["video/mp4;codecs=avc1,opus", "video/mp4"]
+      : ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+  const supportedType = typeCandidates.find((type) => MediaRecorder.isTypeSupported(type));
   try {
     mediaRecorder = new MediaRecorder(cameraStream, supportedType ? { mimeType: supportedType } : undefined);
   } catch (_) {
@@ -517,12 +544,16 @@ async function toggleRecording() {
   mediaRecorder.onstop = async () => {
     const duration = (Date.now() - startedAt) / 1000;
     const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || "video/webm" });
+    const actualFormat = blob.type.includes("mp4") ? "mp4" : "webm";
+    const savedFormat = preferredFormat === "mov" && actualFormat === "mp4" ? "mov" : actualFormat;
     recordedChunks = [];
     elements.recordBtn.classList.remove("recording");
     elements.recordButtonText.textContent = "Record";
     elements.cameraStatus.textContent = "Saving recording...";
-    await saveRecording(blob, duration);
-    elements.cameraStatus.textContent = "Recording saved";
+    await saveRecording(blob, duration, savedFormat);
+    elements.cameraStatus.textContent = preferredFormat === "mov" && actualFormat !== "mp4"
+      ? "MOV requires MP4 support; recording saved as WebM"
+      : "Recording saved";
   };
   mediaRecorder.start(1000);
   elements.recordBtn.classList.add("recording");

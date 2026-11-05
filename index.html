@@ -106,6 +106,11 @@ Take a breath, look toward your audience, and begin.</textarea>
       <select id="cameraSelect" aria-label="Camera device">
         <option value="">Default camera</option>
       </select>
+      <select id="formatSelect" aria-label="Recording format" title="MP4 is preferred; MOV uses MP4-compatible recording when available">
+        <option value="mp4" selected>MP4</option>
+        <option value="webm">WebM</option>
+        <option value="mov">MOV*</option>
+      </select>
       <button id="switchCameraBtn" class="camera-secondary" type="button">Switch</button>
       <button id="libraryBtn" class="camera-secondary" type="button">Library</button>
       <button id="recordBtn" class="record-button" type="button" disabled>
