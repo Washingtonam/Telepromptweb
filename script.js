@@ -7,6 +7,8 @@ const elements = {
   editor: document.getElementById("scriptEditor"),
   readingText: document.getElementById("readingText"),
   viewport: document.getElementById("prompterViewport"),
+  readingProgressValue: document.getElementById("readingProgressValue"),
+  readingProgressFill: document.getElementById("readingProgressFill"),
   playBtn: document.getElementById("playBtn"),
   resetBtn: document.getElementById("resetBtn"),
   fullscreenBtn: document.getElementById("fullscreenBtn"),
@@ -25,6 +27,7 @@ const elements = {
   cameraPanel: document.getElementById("cameraPanel"),
   cameraCloseBtn: document.getElementById("cameraCloseBtn"),
   cameraPreview: document.getElementById("cameraPreview"),
+  cameraResizeHandle: document.getElementById("cameraResizeHandle"),
   cameraSelect: document.getElementById("cameraSelect"),
   formatSelect: document.getElementById("formatSelect"),
   switchCameraBtn: document.getElementById("switchCameraBtn"),
@@ -37,6 +40,7 @@ const elements = {
 };
 
 const CAMERA_POSITION_KEY = "teleprompter-camera-position-v1";
+const CAMERA_SIZE_KEY = "teleprompter-camera-size-v1";
 const CAMERA_FORMAT_KEY = "teleprompter-camera-format-v1";
 
 const defaultSettings = {
@@ -128,6 +132,8 @@ function updateProgress() {
   elements.progressValue.textContent = `${rounded}%`;
   elements.progressFill.style.width = `${percentage}%`;
   elements.progressTrack.setAttribute("aria-valuenow", String(rounded));
+  elements.readingProgressValue.textContent = `${rounded}%`;
+  elements.readingProgressFill.style.width = `${percentage}%`;
 }
 
 function setPlaying(nextPlaying) {
@@ -232,7 +238,18 @@ elements.switchCameraBtn.addEventListener("click", () => {
   startCamera();
 });
 elements.libraryBtn.addEventListener("click", () => {
-  elements.cameraPanel.classList.toggle("library-open");
+  const isExpanded = elements.cameraPanel.classList.toggle("library-open");
+  if (isExpanded) {
+    elements.cameraPanel.style.width = "";
+    elements.cameraPanel.style.height = "";
+  } else {
+    try {
+      const size = JSON.parse(localStorage.getItem(CAMERA_SIZE_KEY));
+      if (size && Number.isFinite(size.width) && Number.isFinite(size.height)) {
+        applyCameraSize(size);
+      }
+    } catch (_) {}
+  }
   renderRecordings();
   window.requestAnimationFrame(restoreCameraPosition);
 });
@@ -250,8 +267,32 @@ function applyCameraPosition(position) {
   elements.cameraPanel.style.bottom = "auto";
 }
 
+function applyCameraSize(size) {
+  if (!size || elements.cameraPanel.classList.contains("library-open")) return;
+  const rect = elements.cameraPanel.getBoundingClientRect();
+  const mobile = window.matchMedia("(max-width: 620px)").matches;
+  const minWidth = mobile ? 140 : 240;
+  const minHeight = mobile ? 132 : 260;
+  const maxWidth = Math.max(minWidth, window.innerWidth - 16);
+  const maxHeight = Math.max(minHeight, window.innerHeight - 60);
+  const width = Math.max(minWidth, Math.min(maxWidth, size.width));
+  const height = Math.max(minHeight, Math.min(maxHeight, size.height));
+  elements.cameraPanel.style.width = `${width}px`;
+  elements.cameraPanel.style.height = `${height}px`;
+  const left = Math.max(8, Math.min(window.innerWidth - width - 8, rect.left));
+  const top = Math.max(52, Math.min(window.innerHeight - height - 8, rect.top));
+  elements.cameraPanel.style.left = `${left}px`;
+  elements.cameraPanel.style.top = `${top}px`;
+  elements.cameraPanel.style.right = "auto";
+  elements.cameraPanel.style.bottom = "auto";
+}
+
 function restoreCameraPosition() {
   try {
+    const size = JSON.parse(localStorage.getItem(CAMERA_SIZE_KEY));
+    if (size && Number.isFinite(size.width) && Number.isFinite(size.height)) {
+      applyCameraSize(size);
+    }
     const position = JSON.parse(localStorage.getItem(CAMERA_POSITION_KEY));
     if (position && Number.isFinite(position.x) && Number.isFinite(position.y)) {
       applyCameraPosition(position);
@@ -287,6 +328,56 @@ function finishCameraDrag(event) {
 }
 elements.cameraPanel.addEventListener("pointerup", finishCameraDrag);
 elements.cameraPanel.addEventListener("pointercancel", finishCameraDrag);
+let cameraResize = null;
+elements.cameraResizeHandle.addEventListener("pointerdown", (event) => {
+  event.preventDefault();
+  const rect = elements.cameraPanel.getBoundingClientRect();
+  cameraResize = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    width: rect.width,
+    height: rect.height
+  };
+  elements.cameraResizeHandle.setPointerCapture(event.pointerId);
+});
+elements.cameraResizeHandle.addEventListener("pointermove", (event) => {
+  if (!cameraResize || event.pointerId !== cameraResize.pointerId) return;
+  applyCameraSize({
+    width: cameraResize.width + event.clientX - cameraResize.startX,
+    height: cameraResize.height + event.clientY - cameraResize.startY
+  });
+});
+function finishCameraResize(event) {
+  if (!cameraResize || event.pointerId !== cameraResize.pointerId) return;
+  cameraResize = null;
+  const rect = elements.cameraPanel.getBoundingClientRect();
+  try {
+    localStorage.setItem(CAMERA_SIZE_KEY, JSON.stringify({ width: rect.width, height: rect.height }));
+    localStorage.setItem(CAMERA_POSITION_KEY, JSON.stringify({ x: rect.left, y: rect.top }));
+  } catch (_) {}
+}
+elements.cameraResizeHandle.addEventListener("pointerup", finishCameraResize);
+elements.cameraResizeHandle.addEventListener("pointercancel", finishCameraResize);
+elements.cameraResizeHandle.addEventListener("keydown", (event) => {
+  const steps = event.shiftKey ? 40 : 16;
+  const delta = {
+    ArrowRight: { width: steps, height: 0 },
+    ArrowLeft: { width: -steps, height: 0 },
+    ArrowDown: { width: 0, height: steps },
+    ArrowUp: { width: 0, height: -steps }
+  }[event.key];
+  if (!delta) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const rect = elements.cameraPanel.getBoundingClientRect();
+  applyCameraSize({ width: rect.width + delta.width, height: rect.height + delta.height });
+  const resized = elements.cameraPanel.getBoundingClientRect();
+  try {
+    localStorage.setItem(CAMERA_SIZE_KEY, JSON.stringify({ width: resized.width, height: resized.height }));
+    localStorage.setItem(CAMERA_POSITION_KEY, JSON.stringify({ x: resized.left, y: resized.top }));
+  } catch (_) {}
+});
 window.addEventListener("resize", () => {
   if (!elements.cameraPanel.hidden) restoreCameraPosition();
 });

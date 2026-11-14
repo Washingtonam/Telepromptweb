@@ -48,6 +48,10 @@ Take a breath, look toward your audience, and begin.</textarea>
           <div class="guide guide-left" aria-hidden="true"></div>
           <div class="guide guide-right" aria-hidden="true"></div>
           <div class="reading-text" id="readingText" aria-live="off"></div>
+          <div class="reading-progress" aria-hidden="true">
+            <span id="readingProgressValue">0%</span>
+            <span class="reading-progress-track"><span id="readingProgressFill"></span></span>
+          </div>
         </div>
       </section>
     </section>
@@ -102,6 +106,9 @@ Take a breath, look toward your audience, and begin.</textarea>
       <button class="camera-close" id="cameraCloseBtn" type="button" aria-label="Close camera panel">&times;</button>
     </div>
     <video id="cameraPreview" autoplay muted playsinline></video>
+    <button class="camera-resize-handle" id="cameraResizeHandle" type="button" aria-label="Resize camera preview" title="Drag or use arrow keys to resize">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 20 20 8M14 20l6-6M20 14v6h-6"/></svg>
+    </button>
     <div class="camera-toolbar">
       <select id="cameraSelect" aria-label="Camera device">
         <option value="">Default camera</option>
