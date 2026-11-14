@@ -166,13 +166,15 @@ button { color: inherit; }
 .prompter-viewport::-webkit-scrollbar { display: none; }
 
 .reading-progress {
-  position: absolute;
+  position: sticky;
   z-index: 6;
   top: 14px;
-  right: 14px;
   display: flex;
+  width: fit-content;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
+  margin-bottom: -34px;
   min-width: 76px;
   padding: 7px 9px;
   border: 1px solid rgba(255,255,255,0.12);
@@ -527,10 +529,23 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   .camera-panel .camera-heading strong {
     font-size: 11px;
   }
-  .camera-panel .camera-heading span,
   .camera-panel .recordings-heading,
   .camera-panel .recordings-list {
     display: none;
+  }
+  .camera-panel .camera-heading > div {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+  }
+  .camera-panel .camera-heading span {
+    display: block;
+    max-width: 92px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9px;
   }
   .camera-close {
     width: 22px;
