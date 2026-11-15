@@ -159,7 +159,7 @@ function setPlaying(nextPlaying) {
 
 function scrollFrame(timestamp) {
   if (!isPlaying) return;
-  const delta = Math.min(100, timestamp - lastFrameTime);
+  const delta = Math.min(1000, timestamp - lastFrameTime);
   lastFrameTime = timestamp;
   const basePixelsPerSecond = 34;
   const max = elements.viewport.scrollHeight - elements.viewport.clientHeight;
