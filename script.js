@@ -56,6 +56,7 @@ let isPlaying = false;
 let elapsedSeconds = 0;
 let lastFrameTime = 0;
 let timerAccumulator = 0;
+let scrollRemainder = 0;
 let saveTimer = 0;
 let animationFrame = 0;
 
@@ -148,8 +149,10 @@ function setPlaying(nextPlaying) {
   if (isPlaying) {
     lastFrameTime = performance.now();
     timerAccumulator = 0;
+    scrollRemainder = 0;
     animationFrame = requestAnimationFrame(scrollFrame);
   } else {
+    scrollRemainder = 0;
     cancelAnimationFrame(animationFrame);
   }
 }
@@ -162,8 +165,13 @@ function scrollFrame(timestamp) {
   const max = elements.viewport.scrollHeight - elements.viewport.clientHeight;
 
   if (max > 0) {
-    elements.viewport.scrollTop += basePixelsPerSecond * settings.speed * (delta / 1000);
-    updateProgress();
+    const distance = basePixelsPerSecond * settings.speed * (delta / 1000) + scrollRemainder;
+    const wholePixels = Math.floor(distance + 1e-9);
+    scrollRemainder = distance - wholePixels;
+    if (wholePixels > 0) {
+      elements.viewport.scrollTop += wholePixels;
+      updateProgress();
+    }
   }
 
   timerAccumulator += delta;
