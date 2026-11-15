@@ -537,7 +537,8 @@ async function renderRecordings() {
 
 function downloadRecording(recording) {
   const extension = getRecordingFormat(recording);
-  const url = URL.createObjectURL(recording.blob);
+  const blob = getExportBlob(recording, extension);
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = `teleprompter-${recording.createdAt.replace(/[:.]/g, "-")}.${extension}`;
@@ -554,14 +555,19 @@ function getRecordingFormat(recording) {
   return recording.format === "mov" ? "mp4" : recording.format || "webm";
 }
 
+function getExportBlob(recording, extension) {
+  const mimeType = extension === "mp4" ? "video/mp4" : "video/webm";
+  return new Blob([recording.blob], { type: mimeType });
+}
+
 function isMobileShareSupported() {
   return Boolean(navigator.share && navigator.canShare && window.matchMedia("(max-width: 620px)").matches);
 }
 
 async function saveOrShareRecording(recording) {
   const extension = getRecordingFormat(recording);
-  const fileType = recording.blob.type || (extension === "mp4" ? "video/mp4" : "video/webm");
-  const file = new File([recording.blob], `teleprompter-${Date.now()}.${extension}`, { type: fileType });
+  const blob = getExportBlob(recording, extension);
+  const file = new File([blob], `teleprompter-${Date.now()}.${extension}`, { type: blob.type });
   if (navigator.share && navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({

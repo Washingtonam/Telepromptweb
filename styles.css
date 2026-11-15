@@ -491,6 +491,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 @media (max-width: 620px) {
   html, body { overflow: auto; }
   .app { height: 100dvh; grid-template-rows: 52px minmax(0, 1fr) 178px; }
+  .reading-progress {
+    margin-left: 12px;
+    margin-right: auto;
+  }
   .topbar { padding: 0 14px; }
   .workspace { grid-template-columns: 42% 58%; }
   .editor-panel { padding: 8px 6px; }
